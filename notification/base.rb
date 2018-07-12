@@ -1,6 +1,9 @@
 class Notification::Base
   attr_accessor :name, :payload, :primary_entity_type, :primary_entity_id
 
+
+  $mysql = Mysql.new(host, "user123", "user123", "meesho")
+
   # Constructor for a notifciation request object
   def initialize(name, payload)
     @name = name # notification name : order_placed, invoice_created etc
@@ -15,10 +18,41 @@ class Notification::Base
     return Template::Base.templates()
   end
 
-  def self.check_existance(notification, exist_flag)
+  # Mysql schema sample for notification table
+
+  #CREATE TABLE events (
+  #   `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  #   event_name integer not null
+  # )ENGINE=innodb;
+
+
+
+  #CREATE TABLE notification (
+  #   `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  #   event_id integer not null
+  #   parent_type varchar(255) not null,
+  #   parent_id integer not null,
+  #   payload text not null,
+  #   status enum("enqueued", "submitted", "failed", "delivered") not null
+  # )ENGINE=innodb;
+
+  #Sample values
+  # id => 1, event_id = 1(invoice_created_notification), parent_type => "Invoice" (polymorphic class), parent_id => 12 (invoice id: polymorphic reference), payload => json payload ("amount" : 123.00, "currency" => "INR"),
+  # status : enqueued
+
+
+
+
+  def self.check_existance(dependent_on, exist_flag, notification)
     # Check if notification already exists or not exists depending on exist_flag
     # w.r.t to notification primary entity type or primary_entity_id with status enqueued
-    return true
+    if exist_flag
+
+      # Checks if we have order placed notification sent (!failed) or not with that order_id (primary entity_id)
+      # 2 event id for order_placed_notification
+      # primary_entity_id for order_placed is order id
+      exists = $mysql.query("select 1 from notification where event_id = ? and status != 'failed' and parent_type = ? and parent_id = ? ", 2, 'Order',notification.primary_entity_id).fetch
+      return exists
   end
 
 
